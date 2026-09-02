@@ -521,6 +521,16 @@ resource "github_repository" "test" {
 		resource.Test(t, resource.TestCase{
 			PreCheck:          func() { skipUnauthenticated(t) },
 			ProviderFactories: providerFactories,
+			CheckDestroy: func(_ *terraform.State) error {
+				repository, _, err := testAccConf.meta.v3client.Repositories.Get(t.Context(), testAccConf.meta.name, testRepoName)
+				if err != nil {
+					return fmt.Errorf("failed to get repository %q after destroy: %w", testRepoName, err)
+				}
+				if !repository.GetArchived() {
+					return fmt.Errorf("repository %q was not archived on destroy", testRepoName)
+				}
+				return nil
+			},
 			Steps: []resource.TestStep{
 				{
 					Config: fmt.Sprintf(config, testRepoName, testAccConf.testRepositoryVisibility),
